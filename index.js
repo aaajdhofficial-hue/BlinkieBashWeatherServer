@@ -7,7 +7,8 @@ app.use(express.json());
 let currentWeather = {
     type: 'None',
     rooms: 'all',
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    duration: 30
 };
 
 const SECRET_KEY = 'blinkiebash2024';
@@ -53,6 +54,12 @@ async function registerCommands() {
                         { name: 'Moonmade', value: 'Moonmade' },
                         { name: 'Radioactive', value: 'Radioactive' }
                     ))
+            .addIntegerOption(option =>
+                option.setName('duration')
+                    .setDescription('How long the event lasts in minutes (default: 30)')
+                    .setRequired(false)
+                    .setMinValue(1)
+                    .setMaxValue(120))
             .addStringOption(option =>
                 option.setName('rooms')
                     .setDescription('Which rooms to affect')
@@ -96,23 +103,25 @@ client.on('interactionCreate', async interaction => {
     }
 
     const weatherType = interaction.options.getString('type');
+    const duration = interaction.options.getInteger('duration') || 30;
     const rooms = interaction.options.getString('rooms') || 'all';
     const roomName = interaction.options.getString('roomname') || '';
 
     currentWeather = {
         type: weatherType,
         rooms: rooms === 'all' ? 'all' : roomName,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        duration: duration
     };
 
-    const endTime = Math.floor((Date.now() + (30 * 60 * 1000)) / 1000);
+    const endTime = Math.floor((Date.now() + (duration * 60 * 1000)) / 1000);
 
     const embed = new EmbedBuilder()
         .setColor(weatherColors[weatherType] || 0xFFFFFF)
         .setTitle(`${weatherEmojis[weatherType] || '🌤'} Weather Event Started`)
         .addFields(
             { name: 'Weather', value: `**${weatherType}** is now active!`, inline: false },
-            { name: 'Duration', value: '30 minutes', inline: true },
+            { name: 'Duration', value: `${duration} minutes`, inline: true },
             { name: 'Ends At', value: `<t:${endTime}:R>`, inline: true },
             { name: 'Rooms', value: rooms === 'all' ? 'All Rooms' : roomName, inline: false }
         )
@@ -120,7 +129,7 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.reply({ embeds: [embed] });
 
-    console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName}`);
+    console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName} for ${duration} minutes`);
 });
 
 app.get('/weather', (req, res) => {

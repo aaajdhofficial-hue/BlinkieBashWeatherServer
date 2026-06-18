@@ -71,7 +71,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.commandName !== 'weather') return;
 
     // Replace with your allowed role ID
-    const ALLOWED_ROLE_ID = 'YOUR_ROLE_ID_HERE';
+    const ALLOWED_ROLE_ID = '1516540618292330577';
 
     const member = interaction.member;
     if (!member.roles.cache.has(ALLOWED_ROLE_ID)) {

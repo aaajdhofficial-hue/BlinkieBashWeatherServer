@@ -1,10 +1,9 @@
 const express = require('express');
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const app = express();
 app.use(express.json());
 
-// Store the current weather event
 let currentWeather = {
     type: 'None',
     rooms: 'all',
@@ -19,7 +18,23 @@ const client = new Client({
     ] 
 });
 
-const weatherTypes = ['None', 'Wet', 'HeatWave', 'Frost', 'Moonmade', 'Radioactive'];
+const weatherEmojis = {
+    'None': '☀️',
+    'Wet': '🌧️',
+    'HeatWave': '🔥',
+    'Frost': '❄️',
+    'Moonmade': '🌙',
+    'Radioactive': '☢️'
+};
+
+const weatherColors = {
+    'None': 0xFFFFFF,
+    'Wet': 0x3498DB,
+    'HeatWave': 0xFF6B00,
+    'Frost': 0x00FFFF,
+    'Moonmade': 0x9B59B6,
+    'Radioactive': 0x00FF00
+};
 
 async function registerCommands() {
     const commands = [
@@ -69,7 +84,6 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'weather') return;
 
-    // Replace with your allowed role ID
     const ALLOWED_ROLE_ID = '1516540618292330577';
 
     const member = interaction.member;
@@ -91,7 +105,21 @@ client.on('interactionCreate', async interaction => {
         timestamp: Date.now()
     };
 
-    await interaction.reply(`🌤 Weather event set to **${weatherType}** for **${rooms === 'all' ? 'ALL rooms' : roomName}**!`);
+    const endTime = Math.floor((Date.now() + (30 * 60 * 1000)) / 1000);
+
+    const embed = new EmbedBuilder()
+        .setColor(weatherColors[weatherType] || 0xFFFFFF)
+        .setTitle(`${weatherEmojis[weatherType] || '🌤'} Weather Event Started`)
+        .addFields(
+            { name: 'Weather', value: `**${weatherType}** is now active!`, inline: false },
+            { name: 'Duration', value: '30 minutes', inline: true },
+            { name: 'Ends At', value: `<t:${endTime}:R>`, inline: true },
+            { name: 'Rooms', value: rooms === 'all' ? 'All Rooms' : roomName, inline: false }
+        )
+        .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+
     console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName}`);
 });
 

@@ -11,15 +11,17 @@ let currentWeather = {
     timestamp: Date.now()
 };
 
-// Secret key to verify requests (change this to something unique!)
 const SECRET_KEY = 'blinkiebash2024';
 
-// Discord bot setup
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ] 
+});
 
 const weatherTypes = ['None', 'Wet', 'HeatWave', 'Frost', 'Moonmade', 'Radioactive'];
 
-// Register slash commands
 async function registerCommands() {
     const commands = [
         new SlashCommandBuilder()
@@ -64,10 +66,21 @@ async function registerCommands() {
     }
 }
 
-// Handle slash commands
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== 'weather') return;
+
+    // Replace with your allowed role ID
+    const ALLOWED_ROLE_ID = 'YOUR_ROLE_ID_HERE';
+
+    const member = interaction.member;
+    if (!member.roles.cache.has(ALLOWED_ROLE_ID)) {
+        await interaction.reply({ 
+            content: '❌ You do not have permission to use this command!', 
+            ephemeral: true 
+        });
+        return;
+    }
 
     const weatherType = interaction.options.getString('type');
     const rooms = interaction.options.getString('rooms') || 'all';
@@ -83,12 +96,10 @@ client.on('interactionCreate', async interaction => {
     console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName}`);
 });
 
-// API endpoint - game polls this to get current weather
 app.get('/weather', (req, res) => {
     res.json(currentWeather);
 });
 
-// Health check
 app.get('/', (req, res) => {
     res.send('Blinkies Bash Weather Server is running!');
 });

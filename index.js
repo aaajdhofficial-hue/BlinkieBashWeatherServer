@@ -15,8 +15,7 @@ const SECRET_KEY = 'blinkiebash2024';
 
 const client = new Client({ 
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.Guilds
     ] 
 });
 

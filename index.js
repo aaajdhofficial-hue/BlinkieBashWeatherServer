@@ -11,7 +11,7 @@ let currentWeather = {
     duration: 30
 };
 
-const SECRET_KEY = 'blinkiebash2024';
+let adminList = [];
 
 const client = new Client({ 
     intents: [
@@ -36,6 +36,8 @@ const weatherColors = {
     'Moonmade': 0x9B59B6,
     'Radioactive': 0x00FF00
 };
+
+const ALLOWED_ROLE_ID = '1516540618292330577';
 
 async function registerCommands() {
     const commands = [
@@ -71,7 +73,27 @@ async function registerCommands() {
             .addStringOption(option =>
                 option.setName('roomname')
                     .setDescription('Room name (only if specific room selected)')
-                    .setRequired(false))
+                    .setRequired(false)),
+
+        new SlashCommandBuilder()
+            .setName('grantadmin')
+            .setDescription('Grant admin access to a player in Blinkies Bash')
+            .addStringOption(option =>
+                option.setName('name')
+                    .setDescription('Exact in-game name of the player')
+                    .setRequired(true)),
+
+        new SlashCommandBuilder()
+            .setName('revokeadmin')
+            .setDescription('Revoke admin access from a player')
+            .addStringOption(option =>
+                option.setName('name')
+                    .setDescription('Exact in-game name of the player')
+                    .setRequired(true)),
+
+        new SlashCommandBuilder()
+            .setName('adminlist')
+            .setDescription('Show current list of admins')
     ].map(command => command.toJSON());
 
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -89,9 +111,6 @@ async function registerCommands() {
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName !== 'weather') return;
-
-    const ALLOWED_ROLE_ID = '1516540618292330577';
 
     const member = interaction.member;
     if (!member.roles.cache.has(ALLOWED_ROLE_ID)) {
@@ -102,38 +121,64 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    const weatherType = interaction.options.getString('type');
-    const duration = interaction.options.getInteger('duration') || 30;
-    const rooms = interaction.options.getString('rooms') || 'all';
-    const roomName = interaction.options.getString('roomname') || '';
+    if (interaction.commandName === 'weather') {
+        const weatherType = interaction.options.getString('type');
+        const duration = interaction.options.getInteger('duration') || 30;
+        const rooms = interaction.options.getString('rooms') || 'all';
+        const roomName = interaction.options.getString('roomname') || '';
 
-    currentWeather = {
-        type: weatherType,
-        rooms: rooms === 'all' ? 'all' : roomName,
-        timestamp: Date.now(),
-        duration: duration
-    };
+        currentWeather = {
+            type: weatherType,
+            rooms: rooms === 'all' ? 'all' : roomName,
+            timestamp: Date.now(),
+            duration: duration
+        };
 
-    const endTime = Math.floor((Date.now() + (duration * 60 * 1000)) / 1000);
+        const endTime = Math.floor((Date.now() + (duration * 60 * 1000)) / 1000);
 
-    const embed = new EmbedBuilder()
-        .setColor(weatherColors[weatherType] || 0xFFFFFF)
-        .setTitle(`${weatherEmojis[weatherType] || '🌤'} Weather Event Started`)
-        .addFields(
-            { name: 'Weather', value: `**${weatherType}** is now active!`, inline: false },
-            { name: 'Duration', value: `${duration} minutes`, inline: true },
-            { name: 'Ends At', value: `<t:${endTime}:R>`, inline: true },
-            { name: 'Rooms', value: rooms === 'all' ? 'All Rooms' : roomName, inline: false }
-        )
-        .setTimestamp();
+        const embed = new EmbedBuilder()
+            .setColor(weatherColors[weatherType] || 0xFFFFFF)
+            .setTitle(`${weatherEmojis[weatherType] || '🌤'} Weather Event Started`)
+            .addFields(
+                { name: 'Weather', value: `**${weatherType}** is now active!`, inline: false },
+                { name: 'Duration', value: `${duration} minutes`, inline: true },
+                { name: 'Ends At', value: `<t:${endTime}:R>`, inline: true },
+                { name: 'Rooms', value: rooms === 'all' ? 'All Rooms' : roomName, inline: false }
+            )
+            .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed] });
+        console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName} for ${duration} minutes`);
+    }
 
-    console.log(`Weather set: ${weatherType} for ${rooms === 'all' ? 'all rooms' : roomName} for ${duration} minutes`);
+    else if (interaction.commandName === 'grantadmin') {
+        const name = interaction.options.getString('name');
+        if (!adminList.includes(name)) {
+            adminList.push(name);
+        }
+        await interaction.reply(`✅ Granted admin access to **${name}**`);
+        console.log(`Admin granted to: ${name}`);
+    }
+
+    else if (interaction.commandName === 'revokeadmin') {
+        const name = interaction.options.getString('name');
+        adminList = adminList.filter(n => n !== name);
+        await interaction.reply(`🚫 Revoked admin access from **${name}**`);
+        console.log(`Admin revoked from: ${name}`);
+    }
+
+    else if (interaction.commandName === 'adminlist') {
+        const list = adminList.length > 0 ? adminList.join(', ') : 'No admins currently';
+        await interaction.reply(`👑 Current admins: ${list}`);
+    }
 });
 
 app.get('/weather', (req, res) => {
     res.json(currentWeather);
+});
+
+app.get('/admins', (req, res) => {
+    res.json({ admins: adminList });
 });
 
 app.get('/', (req, res) => {
